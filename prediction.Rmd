@@ -64,6 +64,7 @@ parallel_multivariate <- function(a, B, max_iter = 9300, tol_cutoff = 1e-9){
     
     x_col <- rep(0, length(b))
     
+    # Applying gradient descent
     for(iter in 1:max_iter) {
       
       tol <- 0
