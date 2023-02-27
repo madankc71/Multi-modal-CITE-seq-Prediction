@@ -1,4 +1,4 @@
-# Multi-modal-CITE-seq-Prediction
+# Multi modal CITE seq Prediction
 
 I have applied parallel multivariate regression and gradient descent to iteratively improving the prediction that have the accuracy of 81%.
 
