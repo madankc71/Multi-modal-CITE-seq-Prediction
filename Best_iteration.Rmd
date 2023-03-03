@@ -1,0 +1,116 @@
+---
+title: "Max iteration"
+author: "Madan K C"
+date: "2023-03-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load necessary packages and set options for displaying code.
+```{r}
+library(Matrix)
+rna <- as.matrix(read.csv("training_set_rna.csv", row.names = 1))
+adt <- as.matrix(read.csv("training_set_adt.csv", row.names = 1))
+```
+
+```{r}
+# set seed for reproducibility
+set.seed(123)
+
+# number of columns in the data
+p <- ncol(rna)
+q <- ncol(adt)
+
+# create a vector of column indices to use for splitting data
+train_indices_rna <- sample(1:p, size = round(0.8*p), replace = FALSE)
+train_indices_adt<- sample(1:q, size = round(0.8*q), replace = FALSE)
+
+# split rna into train and test data
+rna_train <- rna[, train_indices_rna]
+rna_test <- rna[, -train_indices_rna]
+
+# split adt into train and test data
+adt_train <- adt[, train_indices_adt]
+adt_test <- adt[, -train_indices_adt]
+```
+
+```{r}
+A <- t(rna_train)
+y <- t(adt_train)
+```
+
+Calculate 
+```{r}
+a <- crossprod(A)
+B <- crossprod(A, y)
+```
+
+
+```{r}
+
+parallel_multivariate <- function(a, B, max_iter = j, tol_cutoff = 1e-2){
+  x <- matrix(0, nrow(a), ncol(B))
+  
+  for(i in 1:ncol(B) ) {
+    b <- B[,i]
+    
+    x_col <- rep(0, length(b))
+    
+    # Applying gradient descent
+    for(iter in 1:max_iter) {
+      
+      tol <- 0
+      
+      for(j in 1:length(b)) {
+        bj <- b[j]
+        ajj <- a[j, j]
+        z <- bj / ajj
+        x_col[j] <- x_col[j] + z
+        b <- b - z * a[, j]
+        tol <- tol + abs(z / x_col[j])
+      }
+      if(iter %% 100 == 0) cat(" iter: ", iter, ", tol: ", tol, "\n") 
+      if(tol < tol_cutoff) break
+    }
+    x[,i] <- x_col 
+  
+  }
+  return(x)
+}
+```
+
+```{r}
+highest_cor <- -1
+best_iteration <- 1
+tot_iteration <- 1000
+
+for(k in 1:tot_iteration) {
+  x <- parallel_multivariate(a, B)
+  predicted_adt <- t(rna_test) %*% x
+  predicted_adt <- t(predicted_adt)
+  correlation <- cor(adt_test,predicted_adt)
+  
+  correlations <- apply(cbind(adt_test, predicted_adt), 2, cor)[1:ncol(adt_test), (ncol(adt_test)+1):(ncol(adt_test)+ncol(predicted_adt))]
+
+  mean_correlation <- mean(correlations)
+
+  
+  if(mean_correlation > highest_cor) {
+    best_iteration <- k
+    highest_cor <- mean_correlation
+  }
+} 
+cat("Best Iteration: ", best_iteration)
+```
+
+
+
+
+
+
+
+
+

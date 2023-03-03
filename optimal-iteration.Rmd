@@ -1,0 +1,105 @@
+---
+title: "Max iteration"
+author: "Madan K C"
+date: "2023-03-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load necessary packages and set options for displaying code.
+```{r}
+library(Matrix)
+rna <- as.matrix(read.csv("training_set_rna.csv", row.names = 1))
+adt <- as.matrix(read.csv("training_set_adt.csv", row.names = 1))
+```
+
+
+```{r}
+A <- t(rna)
+y <- t(adt)
+```
+
+Calculate 
+```{r}
+a <- crossprod(A)
+B <- crossprod(A, y)
+```
+
+
+```{r}
+
+parallel_multivariate <- function(a, B, k){
+  max_iter <- k
+  tol_cutoff = 1e-4
+  
+  x <- matrix(0, nrow(a), ncol(B))
+  
+  for(i in 1:ncol(B) ) {
+    b <- B[,i]
+    
+    x_col <- rep(0, length(b))
+    
+    # Applying gradient descent
+    for(iter in 1:max_iter) {
+      
+      tol <- 0
+      
+      for(j in 1:length(b)) {
+        bj <- b[j]
+        ajj <- a[j, j]
+        z <- bj / ajj
+        x_col[j] <- x_col[j] + z
+        b <- b - z * a[, j]
+        tol <- tol + abs(z / x_col[j])
+      }
+      #if(iter %% 100 == 0) cat(" iter: ", iter, ", tol: ", tol, "\n") 
+      if(tol < tol_cutoff) break
+    }
+    x[,i] <- x_col 
+  
+  }
+  return(x)
+}
+```
+
+
+```{r}
+highest_cor <- 0
+best_iteration <- 1
+tot_iteration <- 1000
+
+for(k in 101:tot_iteration) {
+  x <- parallel_multivariate(a, B, k)
+  predicted_adt <- t(rna) %*% x
+  predicted_adt <- t(predicted_adt)
+  
+  adt_vec <- as.vector(adt)
+  predicted_adt_vec <- as.vector(predicted_adt)
+  correlations <- cor(adt_vec, predicted_adt_vec)
+
+  #correlations <- cor(adt, predicted_adt)
+  
+ # correlations <- apply(cbind(adt_test, predicted_adt), 2, cor)[1:ncol(adt_test), (ncol(adt_test)+1):(ncol(adt_test)+ncol(predicted_adt))]
+  
+  mean_correlation <- mean(correlations)
+
+  if(mean_correlation > highest_cor) {
+    best_iteration <- k
+    highest_cor <- mean_correlation
+  }
+}
+cat("Best Iteration: ", best_iteration, "\n")
+cat("Best corrleation: ", highest_cor)
+```
+
+
+
+
+
+
+
+
+
